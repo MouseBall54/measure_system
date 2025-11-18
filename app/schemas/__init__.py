@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MeasurementFileBase(BaseModel):
@@ -114,6 +114,59 @@ class MeasurementPipelineCreate(BaseModel):
     file: MeasurementFileCreate
     raw_measurements: list[PipelineRawMeasurement] = Field(default_factory=list)
     stat_measurements: list[PipelineStatMeasurement] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "file": {
+                    "post_time": "2024-05-20T08:00:00Z",
+                    "file_path": "/data/line_a/20240520/img/wafer123/run1.csv",
+                    "parent_dir_0": "img",
+                    "parent_dir_1": "wafer123",
+                    "parent_dir_2": "line_a",
+                    "file_name": "run1.csv",
+                    "processing_ms": 1520,
+                    "status": "OK"
+                },
+                "raw_measurements": [
+                    {
+                        "item": {
+                            "class_name": "DEFECT",
+                            "measure_item_key": "P1",
+                            "metric_type": {
+                                "name": "CD",
+                                "unit": "nm"
+                            }
+                        },
+                        "measurable": True,
+                        "x_index": 3,
+                        "y_index": 5,
+                        "x_0": 12.5,
+                        "y_0": 8.0,
+                        "x_1": 13.0,
+                        "y_1": 8.6,
+                        "value": 31.27
+                    }
+                ],
+                "stat_measurements": [
+                    {
+                        "item": {
+                            "class_name": "DEFECT",
+                            "measure_item_key": "P1",
+                            "metric_type": {
+                                "name": "CD",
+                                "unit": "nm"
+                            }
+                        },
+                        "values": [
+                            {"value_type_name": "AVG", "value": 31.27},
+                            {"value_type_name": "STD", "value": 0.42}
+                        ]
+                    }
+                ]
+            }
+        }
+    )
 
 
 class MeasurementPipelineResult(BaseModel):

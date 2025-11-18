@@ -131,22 +131,6 @@ erDiagram
 
 ## API Payload Examples
 
-### POST /files
-
-```json
-{
-  "post_time": "2024-05-20T08:00:00Z",
-  "file_path": "/data/line_a/20240520/img/wafer123/run1.csv",
-  "parent_dir_0": "img",
-  "parent_dir_1": "wafer123",
-  "parent_dir_2": "line_a",
-  "file_name": "run1.csv",
-  "file_hash": "ab3f...",
-  "processing_ms": 1520,
-  "status": "OK"
-}
-```
-
 ### POST /measurement-results
 
 ```json
@@ -170,6 +154,7 @@ erDiagram
           "unit": "nm"
         }
       },
+      "measurable": true,
       "x_index": 3,
       "y_index": 5,
       "x_0": 12.5,
