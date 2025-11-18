@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     mysql_host: str = "localhost"
     mysql_port: int = 3306
     mysql_user: str = "measure_user"
-    mysql_password: str = "measure_pass"
-    mysql_db: str = "measure_db"
+    mysql_password: str = "power123!"
+    mysql_db: str = "measure_system"
 
     echo_sql: bool = False
 

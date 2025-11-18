@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class MeasurementFileBase(BaseModel):
@@ -119,7 +119,27 @@ class MeasurementPipelineCreate(BaseModel):
     file: MeasurementFileCreate
     raw_measurements: list[PipelineRawMeasurement] = Field(default_factory=list)
     stat_measurements: list[PipelineStatMeasurement] = Field(default_factory=list)
-    class_counts: list[FileClassCountPayload] = Field(default_factory=list)
+    class_counts: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_class_counts(cls, values: dict[str, Any]) -> dict[str, Any]:
+        counts = values.get("class_counts")
+        if counts is None:
+            values["class_counts"] = {}
+            return values
+        if isinstance(counts, dict):
+            return values
+        if isinstance(counts, list):
+            normalized: dict[str, int] = {}
+            for entry in counts:
+                payload = entry
+                if not isinstance(entry, FileClassCountPayload):
+                    payload = FileClassCountPayload(**entry)
+                normalized[payload.class_name] = payload.count
+            values["class_counts"] = normalized
+            return values
+        raise ValueError("class_counts must be a dict or list of objects")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -137,8 +157,8 @@ class MeasurementPipelineCreate(BaseModel):
                 "raw_measurements": [
                     {
                         "item": {
-                            "class_name": "DEFECT",
-                            "measure_item_key": "P1",
+                            "class_name": "P1",
+                            "measure_item_key": "VERTICAL_CD",
                             "metric_type": {
                                 "name": "CD",
                                 "unit": "nm"
@@ -157,8 +177,8 @@ class MeasurementPipelineCreate(BaseModel):
                 "stat_measurements": [
                     {
                         "item": {
-                            "class_name": "DEFECT",
-                            "measure_item_key": "P1",
+                            "class_name": "P1",
+                            "measure_item_key": "VERTICAL_CD",
                             "metric_type": {
                                 "name": "CD",
                                 "unit": "nm"
@@ -170,9 +190,10 @@ class MeasurementPipelineCreate(BaseModel):
                         ]
                     }
                 ],
-                "class_counts": [
-                    {"class_name": "P1", "count": 500}
-                ]
+                "class_counts": {
+                    "P1": 500,
+                    "P2": 170
+                }
             }
         }
     )

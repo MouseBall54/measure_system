@@ -180,8 +180,60 @@ erDiagram
       ]
     }
   ],
-  "class_counts": [
-    { "class_name": "P1", "count": 500 }
-  ]
+  "class_counts": {
+    "P1": 500,
+    "P2": 170
+  }
 }
+```
+
+## Common Queries
+
+Raw 샘플/통계 데이터를 조회할 때 사용할 수 있는 SQL 예시입니다.
+
+### Raw Measurements with Context
+
+```sql
+SELECT
+    mf.id            AS file_id,
+    mf.file_name,
+    mf.post_time,
+    mi.class_name,
+    mi.measure_item_key,
+    mmt.name         AS metric_name,
+    mmt.unit         AS metric_unit,
+    rmr.measurable,
+    rmr.x_index,
+    rmr.y_index,
+    rmr.x_0,
+    rmr.y_0,
+    rmr.x_1,
+    rmr.y_1,
+    rmr.value
+FROM raw_measurement_records rmr
+JOIN measurement_files mf      ON mf.id = rmr.file_id
+JOIN measurement_items mi      ON mi.id = rmr.item_id
+JOIN measurement_metric_types mmt ON mmt.id = mi.metric_type_id
+ORDER BY mf.id, mi.id, rmr.y_index, rmr.x_index;
+```
+
+### Statistical Measurements with Values
+
+```sql
+SELECT
+    mf.id             AS file_id,
+    mf.file_name,
+    mi.class_name,
+    mi.measure_item_key,
+    mmt.name          AS metric_name,
+    mmt.unit          AS metric_unit,
+    svt.name          AS stat_value_type,
+    smv.value
+FROM stat_measurements sm
+JOIN measurement_files mf      ON mf.id = sm.file_id
+JOIN measurement_items mi      ON mi.id = sm.item_id
+JOIN measurement_metric_types mmt ON mmt.id = mi.metric_type_id
+JOIN stat_measurement_values smv ON smv.stat_measurement_id = sm.id
+JOIN stat_value_types svt    ON svt.id = smv.value_type_id
+ORDER BY mf.id, mi.id, svt.name;
 ```
