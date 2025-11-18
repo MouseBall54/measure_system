@@ -36,6 +36,7 @@ uvicorn app.main:app --reload
 - `app/models/`: SQL 스키마와 동일한 ORM 모델 패키지
 - `app/api/routers/`: 도메인별 라우터(`files`, `raw_measurements`, `stat_measurements`, `health`)
 - `app/main.py`: FastAPI 인스턴스 및 lifespan 훅에서 테이블 자동 생성
+- `docs/db-schema.md`: 전체 DB 스키마/ER 다이어그램 개요
 
 ## 데이터베이스
 
