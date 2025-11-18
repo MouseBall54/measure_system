@@ -20,7 +20,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.mysql import BIGINT, DOUBLE
+from sqlalchemy.dialects.mysql import BIGINT, DATETIME, DOUBLE
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -40,7 +40,7 @@ class MeasurementFile(Base):
     )
 
     id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True)
-    post_time: Mapped[datetime] = mapped_column(DateTime(fsp=6), nullable=False)
+    post_time: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
     post_date: Mapped[date | None] = mapped_column(
         Date,
         Computed("DATE(post_time)", persisted=True),
