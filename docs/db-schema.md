@@ -77,9 +77,10 @@ erDiagram
     }
 
     STAT_MEASUREMENT_VALUES {
-        BIGINT stat_measurement_id PK FK
-        BIGINT value_type_id PK FK
+        BIGINT stat_measurement_id FK
+        BIGINT value_type_id FK
         DOUBLE value
+        PK "stat_measurement_id + value_type_id"
     }
 
     CLASSES {
@@ -89,9 +90,10 @@ erDiagram
     }
 
     FILE_CLASS_COUNTS {
-        BIGINT file_id PK FK
-        BIGINT class_id PK FK
+        BIGINT file_id FK
+        BIGINT class_id FK
         INT cnt
+        PK "file_id + class_id"
     }
 ```
 
