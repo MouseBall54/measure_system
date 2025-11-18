@@ -30,8 +30,13 @@ class MeasurementFileRead(MeasurementFileBase):
         from_attributes = True
 
 
+class MetricTypeLink(BaseModel):
+    name: str
+    unit: str | None = None
+
+
 class StatMeasurementValuePayload(BaseModel):
-    value_type_id: int
+    value_type_name: str
     value: float
 
 
@@ -85,7 +90,7 @@ class RawMeasurementRead(RawMeasurementBase):
 class MeasurementItemLink(BaseModel):
     class_name: str
     measure_item_key: str
-    metric_type_id: int
+    metric_type: MetricTypeLink
 
 
 class PipelineRawMeasurement(BaseModel):
@@ -126,6 +131,7 @@ __all__ = [
     "StatMeasurementCreate",
     "StatMeasurementRead",
     "StatMeasurementValueRead",
+    "MetricTypeLink",
     "MeasurementItemLink",
     "PipelineRawMeasurement",
     "PipelineStatMeasurement",

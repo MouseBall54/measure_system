@@ -166,7 +166,10 @@ erDiagram
       "item": {
         "class_name": "DEFECT",
         "measure_item_key": "P1",
-        "metric_type_id": 10
+        "metric_type": {
+          "name": "CD",
+          "unit": "nm"
+        }
       },
       "x_index": 3,
       "y_index": 5,
@@ -175,6 +178,22 @@ erDiagram
       "x_1": 13.0,
       "y_1": 8.6,
       "value": 31.27
+    }
+  ],
+  "stat_measurements": [
+    {
+      "item": {
+        "class_name": "DEFECT",
+        "measure_item_key": "P1",
+        "metric_type": {
+          "name": "CD",
+          "unit": "nm"
+        }
+      },
+      "values": [
+        { "value_type_name": "AVG", "value": 31.27 },
+        { "value_type_name": "STD", "value": 0.42 }
+      ]
     }
   ]
 }
