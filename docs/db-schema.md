@@ -129,3 +129,53 @@ erDiagram
 3. Raw 데이터를 요약한 통계는 `stat_measurements`에 헤더를 만들고, 각 통계 지표를 `stat_measurement_values`에 기록합니다.
 
 이 구조로 Raw/통계 데이터를 분리해 저장하되, `measurement_files.id`와 `measurement_items.id`를 통해 일관된 조인을 유지할 수 있습니다.
+
+## API Payload Examples
+
+### POST /files
+
+```json
+{
+  "post_time": "2024-05-20T08:00:00Z",
+  "file_path": "/data/line_a/20240520/img/wafer123/run1.csv",
+  "parent_dir_0": "img",
+  "parent_dir_1": "wafer123",
+  "parent_dir_2": "line_a",
+  "file_name": "run1.csv",
+  "file_hash": "ab3f...",
+  "processing_ms": 1520,
+  "status": "OK"
+}
+```
+
+### POST /measurements/integrated
+
+```json
+{
+  "file": {
+    "post_time": "2024-05-20T08:00:00Z",
+    "file_path": "/data/.../run1.csv",
+    "parent_dir_0": "img",
+    "parent_dir_1": "wafer123",
+    "parent_dir_2": "line_a",
+    "file_name": "run1.csv",
+    "status": "OK"
+  },
+  "raw_measurements": [
+    {
+      "item": {
+        "class_name": "DEFECT",
+        "measure_item_key": "P1",
+        "metric_type_id": 10
+      },
+      "x_index": 3,
+      "y_index": 5,
+      "x_0": 12.5,
+      "y_0": 8.0,
+      "x_1": 13.0,
+      "y_1": 8.6,
+      "value": 31.27
+    }
+  ]
+}
+```

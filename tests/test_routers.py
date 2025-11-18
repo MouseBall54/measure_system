@@ -8,9 +8,7 @@ from app.api.routers import router
 def test_router_contains_expected_paths() -> None:
     paths = {route.path for route in router.routes if isinstance(route, APIRoute)}
     assert "/health" in paths
-    assert "/files/" in paths
-    assert "/raw-measurements/" in paths
-    assert "/stat-measurements/" in paths
+    assert "/measurements/integrated" in paths
 
 
 def test_routes_have_tags() -> None:

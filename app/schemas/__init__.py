@@ -82,6 +82,42 @@ class RawMeasurementRead(RawMeasurementBase):
         from_attributes = True
 
 
+class MeasurementItemLink(BaseModel):
+    class_name: str
+    measure_item_key: str
+    metric_type_id: int
+
+
+class PipelineRawMeasurement(BaseModel):
+    item: MeasurementItemLink
+    measurable: bool = True
+    x_index: int
+    y_index: int
+    x_0: float
+    y_0: float
+    x_1: float
+    y_1: float
+    value: float
+
+
+class PipelineStatMeasurement(BaseModel):
+    item: MeasurementItemLink
+    extra_json: dict[str, Any] | None = None
+    values: list[StatMeasurementValuePayload] = Field(default_factory=list)
+
+
+class MeasurementPipelineCreate(BaseModel):
+    file: MeasurementFileCreate
+    raw_measurements: list[PipelineRawMeasurement] = Field(default_factory=list)
+    stat_measurements: list[PipelineStatMeasurement] = Field(default_factory=list)
+
+
+class MeasurementPipelineResult(BaseModel):
+    file: MeasurementFileRead
+    raw_records: int
+    stat_measurements: int
+
+
 __all__ = [
     "MeasurementFileCreate",
     "MeasurementFileRead",
@@ -90,4 +126,9 @@ __all__ = [
     "StatMeasurementCreate",
     "StatMeasurementRead",
     "StatMeasurementValueRead",
+    "MeasurementItemLink",
+    "PipelineRawMeasurement",
+    "PipelineStatMeasurement",
+    "MeasurementPipelineCreate",
+    "MeasurementPipelineResult",
 ]
