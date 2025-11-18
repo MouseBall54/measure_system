@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core import get_session
 from ...models import (
+    DetectionClass,
+    FileClassCount,
     FileStatus,
     MeasurementFile,
     MeasurementItem,
@@ -175,6 +177,32 @@ async def ingest_measurement_results(
                 )
             session.add_all(values)
             stat_count += 1
+
+        for class_entry in payload.class_counts:
+            class_stmt = select(DetectionClass).where(DetectionClass.name == class_entry.class_name)
+            class_result = await session.execute(class_stmt)
+            det_class = class_result.scalar_one_or_none()
+            if det_class is None:
+                det_class = DetectionClass(name=class_entry.class_name)
+                session.add(det_class)
+                await session.flush()
+
+            stmt = select(FileClassCount).where(
+                FileClassCount.file_id == file_data.id,
+                FileClassCount.class_id == det_class.id,
+            )
+            result = await session.execute(stmt)
+            existing = result.scalar_one_or_none()
+            if existing:
+                existing.cnt = class_entry.count
+            else:
+                session.add(
+                    FileClassCount(
+                        file_id=file_data.id,
+                        class_id=det_class.id,
+                        cnt=class_entry.count,
+                    )
+                )
 
     return MeasurementPipelineResult(
         file=MeasurementFileRead.model_validate(file_data),

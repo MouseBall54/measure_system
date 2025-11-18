@@ -110,10 +110,16 @@ class PipelineStatMeasurement(BaseModel):
     values: list[StatMeasurementValuePayload] = Field(default_factory=list)
 
 
+class FileClassCountPayload(BaseModel):
+    class_name: str
+    count: int
+
+
 class MeasurementPipelineCreate(BaseModel):
     file: MeasurementFileCreate
     raw_measurements: list[PipelineRawMeasurement] = Field(default_factory=list)
     stat_measurements: list[PipelineStatMeasurement] = Field(default_factory=list)
+    class_counts: list[FileClassCountPayload] = Field(default_factory=list)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -163,6 +169,9 @@ class MeasurementPipelineCreate(BaseModel):
                             {"value_type_name": "STD", "value": 0.42}
                         ]
                     }
+                ],
+                "class_counts": [
+                    {"class_name": "P1", "count": 500}
                 ]
             }
         }
@@ -187,6 +196,7 @@ __all__ = [
     "MeasurementItemLink",
     "PipelineRawMeasurement",
     "PipelineStatMeasurement",
+    "FileClassCountPayload",
     "MeasurementPipelineCreate",
     "MeasurementPipelineResult",
 ]

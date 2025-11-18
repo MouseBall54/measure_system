@@ -179,6 +179,9 @@ erDiagram
         { "value_type_name": "STD", "value": 0.42 }
       ]
     }
+  ],
+  "class_counts": [
+    { "class_name": "P1", "count": 500 }
   ]
 }
 ```
