@@ -107,7 +107,6 @@ class PipelineRawMeasurement(BaseModel):
 
 class PipelineStatMeasurement(BaseModel):
     item: MeasurementItemLink
-    extra_json: dict[str, Any] | None = None
     values: list[StatMeasurementValuePayload] = Field(default_factory=list)
 
 

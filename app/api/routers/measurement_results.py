@@ -26,7 +26,7 @@ from ...schemas import (
 )
 
 
-router = APIRouter(prefix="/measurements", tags=["measurements"])
+router = APIRouter(prefix="/measurement-results", tags=["measurement-results"])
 
 
 async def _get_or_create_metric_type(
@@ -98,11 +98,11 @@ async def _get_or_create_value_type(
 
 
 @router.post(
-    "/integrated",
+    "/",
     status_code=status.HTTP_201_CREATED,
     response_model=MeasurementPipelineResult,
 )
-async def ingest_integrated_measurements(
+async def ingest_measurement_results(
     payload: MeasurementPipelineCreate,
     session: AsyncSession = Depends(get_session),
 ) -> MeasurementPipelineResult:
@@ -157,12 +157,11 @@ async def ingest_integrated_measurements(
             measurement = StatMeasurement(
                 file_id=file_data.id,
                 item_id=item.id,
-                extra_json=stat_entry.extra_json,
             )
             session.add(measurement)
             await session.flush()
 
-            values: list[StatMeasurementValue] = []
+            values = []
             for value_payload in stat_entry.values:
                 value_type = await _get_or_create_value_type(
                     session, value_payload.value_type_name, value_type_cache

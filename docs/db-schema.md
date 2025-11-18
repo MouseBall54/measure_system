@@ -67,7 +67,6 @@ erDiagram
         BIGINT id PK
         BIGINT file_id FK
         BIGINT item_id FK
-        JSON extra_json
     }
 
     STAT_VALUE_TYPES {
@@ -148,7 +147,7 @@ erDiagram
 }
 ```
 
-### POST /measurements/integrated
+### POST /measurement-results
 
 ```json
 {

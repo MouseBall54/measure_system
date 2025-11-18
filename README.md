@@ -25,14 +25,14 @@ uvicorn app.main:app --reload
 
 ## 기본 엔드포인트
 
-- `POST /measurements/integrated`: 파일 + Raw + 통계 데이터를 한 번에 저장하는 트랜잭션 엔드포인트
+- `POST /measurement-results`: 파일 + Raw + 통계 데이터를 한 번에 저장하는 트랜잭션 엔드포인트
 
 ## 주요 구성
 
 - `app/core/config.py`: Pydantic Settings 기반 환경설정
 - `app/core/db.py`: SQLAlchemy Async 엔진과 세션 의존성
 - `app/models/`: SQL 스키마와 동일한 ORM 모델 패키지
-- `app/api/routers/`: 도메인별 라우터(`measurements`, `health`)
+- `app/api/routers/`: 도메인별 라우터(`measurement_results`, `health`)
 - `app/main.py`: FastAPI 인스턴스 및 lifespan 훅에서 테이블 자동 생성
 - `docs/db-schema.md`: 전체 DB 스키마/ER 다이어그램 개요
 

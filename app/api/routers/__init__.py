@@ -2,11 +2,11 @@
 
 from fastapi import APIRouter
 
-from . import health, measurements
+from . import health, measurement_results
 
 
 router = APIRouter()
 router.include_router(health.router)
-router.include_router(measurements.router)
+router.include_router(measurement_results.router)
 
 __all__ = ["router"]

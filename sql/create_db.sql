@@ -114,7 +114,6 @@ CREATE TABLE stat_measurements (
   id             BIGINT AUTO_INCREMENT PRIMARY KEY,
   file_id        BIGINT NOT NULL,
   item_id        BIGINT NOT NULL,
-  extra_json     JSON NULL,
 
   CONSTRAINT fk_stat_file
     FOREIGN KEY (file_id) REFERENCES measurement_files(id)

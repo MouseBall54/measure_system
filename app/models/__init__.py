@@ -152,7 +152,6 @@ class StatMeasurement(Base):
         ForeignKey("measurement_items.id", ondelete="RESTRICT", onupdate="CASCADE"),
         nullable=False,
     )
-    extra_json: Mapped[dict | None] = mapped_column(JSON)
 
     file: Mapped[MeasurementFile] = relationship("MeasurementFile", back_populates="stat_measurements")
     item: Mapped[MeasurementItem] = relationship("MeasurementItem", back_populates="stat_measurements")
