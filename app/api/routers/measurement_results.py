@@ -48,6 +48,12 @@ def _compute_file_hash(file_payload: MeasurementFileCreate) -> str:
     return sha256(material.encode("utf-8")).hexdigest()
 
 
+def _build_lock_key(file_hash: str) -> str:
+    prefix = "file_ing:"
+    allowable = 64 - len(prefix)
+    return prefix + file_hash[:allowable]
+
+
 async def _get_or_create_node(
     session: AsyncSession,
     name: str | None,
@@ -240,7 +246,7 @@ async def ingest_measurement_results(
     stat_count = 0
 
     file_hash = _compute_file_hash(payload.file)
-    lock_key = f"file_ingest:{file_hash}"
+    lock_key = _build_lock_key(file_hash)
     await _acquire_file_lock(session, lock_key)
     try:
         async with session.begin():
