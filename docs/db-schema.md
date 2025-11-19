@@ -9,6 +9,10 @@ erDiagram
     MEASUREMENT_FILES ||--o{ RAW_MEASUREMENT_RECORDS : "file_id"
     MEASUREMENT_FILES ||--o{ STAT_MEASUREMENTS : "file_id"
     MEASUREMENT_FILES ||--o{ FILE_CLASS_COUNTS : "file_id"
+    MEASUREMENT_NODES ||--o{ MEASUREMENT_FILES : "node_id"
+    MEASUREMENT_MODULES ||--o{ MEASUREMENT_FILES : "module_id"
+    MEASUREMENT_VERSIONS ||--o{ MEASUREMENT_FILES : "version_id"
+    MEASUREMENT_DIRECTORIES ||--o{ MEASUREMENT_FILES : "directory_id"
 
     MEASUREMENT_METRIC_TYPES ||--o{ MEASUREMENT_ITEMS : "metric_type_id"
     MEASUREMENT_ITEMS ||--o{ RAW_MEASUREMENT_RECORDS : "item_id"
@@ -24,14 +28,36 @@ erDiagram
         DATETIME post_time
         DATE post_date
         TEXT file_path
-        VARCHAR parent_dir_0
-        VARCHAR parent_dir_1
-        VARCHAR parent_dir_2
         VARCHAR file_name
+        BIGINT node_id FK
+        BIGINT module_id FK
+        BIGINT version_id FK
+        BIGINT directory_id FK
         CHAR file_hash
         INT processing_ms
         ENUM status
         TIMESTAMP created_at
+    }
+
+    MEASUREMENT_NODES {
+        BIGINT id PK
+        VARCHAR name
+    }
+
+    MEASUREMENT_MODULES {
+        BIGINT id PK
+        VARCHAR name
+    }
+
+    MEASUREMENT_VERSIONS {
+        BIGINT id PK
+        VARCHAR name
+    }
+
+    MEASUREMENT_DIRECTORIES {
+        BIGINT id PK
+        BIGINT parent_id FK
+        VARCHAR name
     }
 
     MEASUREMENT_METRIC_TYPES {
@@ -101,6 +127,13 @@ erDiagram
 ### measurement_files
 - 한 번의 측정/인퍼런스 파일 메타데이터 (`post_time`, `file_path`, 디렉터리/파일명 정보, 해시, 처리시간, 상태 등).
 - Raw/통계/클래스 정보는 모두 이 테이블의 `id`(= `file_id`)를 FK로 참조합니다.
+- 노드/모듈/버전/디렉터리 보조 테이블을 통해 관련 메타 정보를 재사용합니다.
+
+### measurement_nodes / measurement_modules / measurement_versions
+- 장비 노드, 모듈, 버전 정보를 각각 저장하는 테이블입니다. 텍스트 natural key(`name`)로 식별하며, 신규 값은 API 호출 시 자동 생성됩니다.
+
+### measurement_directories
+- `parent_dir_0/1/2` 값을 정규화한 테이블입니다(레벨 + 이름). 파일은 dir0/1/2 FK로 각 디렉터리를 가리킵니다.
 
 ### measurement_metric_types
 - `CD`, `LER` 등 측정 물리량과 단위를 정의합니다.
@@ -138,6 +171,9 @@ erDiagram
   "file": {
     "post_time": "2024-05-20T08:00:00Z",
     "file_path": "/data/.../run1.csv",
+    "node_name": "NODE_A",
+    "module_name": "PROC_UNIT_1",
+    "version_name": "2024.05",
     "parent_dir_0": "img",
     "parent_dir_1": "wafer123",
     "parent_dir_2": "line_a",

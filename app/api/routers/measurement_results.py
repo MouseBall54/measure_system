@@ -11,9 +11,13 @@ from ...models import (
     DetectionClass,
     FileClassCount,
     FileStatus,
+    MeasurementDirectory,
     MeasurementFile,
     MeasurementItem,
     MeasurementMetricType,
+    MeasurementModule,
+    MeasurementNode,
+    MeasurementVersion,
     RawMeasurementRecord,
     StatMeasurement,
     StatMeasurementValue,
@@ -29,6 +33,96 @@ from ...schemas import (
 
 
 router = APIRouter(prefix="/measurement-results", tags=["measurement-results"])
+
+
+async def _get_or_create_node(
+    session: AsyncSession,
+    name: str | None,
+    cache: dict[str, MeasurementNode],
+) -> MeasurementNode | None:
+    if not name:
+        return None
+    if name in cache:
+        return cache[name]
+    stmt = select(MeasurementNode).where(MeasurementNode.name == name)
+    result = await session.execute(stmt)
+    node = result.scalar_one_or_none()
+    if node is None:
+        node = MeasurementNode(name=name)
+        session.add(node)
+        await session.flush()
+    cache[name] = node
+    return node
+
+
+async def _get_or_create_module(
+    session: AsyncSession,
+    name: str | None,
+    cache: dict[str, MeasurementModule],
+) -> MeasurementModule | None:
+    if not name:
+        return None
+    if name in cache:
+        return cache[name]
+    stmt = select(MeasurementModule).where(MeasurementModule.name == name)
+    result = await session.execute(stmt)
+    module = result.scalar_one_or_none()
+    if module is None:
+        module = MeasurementModule(name=name)
+        session.add(module)
+        await session.flush()
+    cache[name] = module
+    return module
+
+
+async def _get_or_create_version(
+    session: AsyncSession,
+    name: str | None,
+    cache: dict[str, MeasurementVersion],
+) -> MeasurementVersion | None:
+    if not name:
+        return None
+    if name in cache:
+        return cache[name]
+    stmt = select(MeasurementVersion).where(MeasurementVersion.name == name)
+    result = await session.execute(stmt)
+    version = result.scalar_one_or_none()
+    if version is None:
+        version = MeasurementVersion(name=name)
+        session.add(version)
+        await session.flush()
+    cache[name] = version
+    return version
+
+
+async def _get_or_create_directory_path(
+    session: AsyncSession,
+    segments: list[str | None],
+    cache: dict[tuple[str, ...], MeasurementDirectory],
+) -> MeasurementDirectory | None:
+    path: list[str] = []
+    parent: MeasurementDirectory | None = None
+    for name in segments:
+        if not name:
+            continue
+        path.append(name)
+        key = tuple(path)
+        if key in cache:
+            parent = cache[key]
+            continue
+        stmt = select(MeasurementDirectory).where(
+            MeasurementDirectory.parent_id == (parent.id if parent else None),
+            MeasurementDirectory.name == name,
+        )
+        result = await session.execute(stmt)
+        directory = result.scalar_one_or_none()
+        if directory is None:
+            directory = MeasurementDirectory(parent_id=parent.id if parent else None, name=name)
+            session.add(directory)
+            await session.flush()
+        cache[key] = directory
+        parent = directory
+    return parent
 
 
 async def _get_or_create_metric_type(
@@ -112,16 +206,33 @@ async def ingest_measurement_results(
     stat_count = 0
 
     async with session.begin():
+        node_cache: dict[str, MeasurementNode] = {}
+        module_cache: dict[str, MeasurementModule] = {}
+        version_cache: dict[str, MeasurementVersion] = {}
+        directory_cache: dict[tuple[str, ...], MeasurementDirectory] = {}
+
+        node = await _get_or_create_node(session, payload.file.node_name, node_cache)
+        module = await _get_or_create_module(session, payload.file.module_name, module_cache)
+        version = await _get_or_create_version(
+            session, payload.file.version_name, version_cache
+        )
+        directory = await _get_or_create_directory_path(
+            session,
+            [payload.file.parent_dir_0, payload.file.parent_dir_1, payload.file.parent_dir_2],
+            directory_cache,
+        )
+
         file_data = MeasurementFile(
             post_time=payload.file.post_time,
             file_path=payload.file.file_path,
-            parent_dir_0=payload.file.parent_dir_0,
-            parent_dir_1=payload.file.parent_dir_1,
-            parent_dir_2=payload.file.parent_dir_2,
             file_name=payload.file.file_name,
             file_hash=payload.file.file_hash,
             processing_ms=payload.file.processing_ms,
             status=FileStatus(payload.file.status),
+            node_id=node.id if node else None,
+            module_id=module.id if module else None,
+            version_id=version.id if version else None,
+            directory_id=directory.id if directory else None,
         )
         session.add(file_data)
         await session.flush()

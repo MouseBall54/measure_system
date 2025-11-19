@@ -40,7 +40,7 @@ uvicorn app.main:app --reload
 
 초기 테이블은 앱 시작 시 자동 생성됩니다. 운영 단계에서는 Alembic 등을 이용해 마이그레이션을 관리하세요.
 
-필요 시 `sql/create_db.sql`을 직접 실행하거나, 도메인 요구에 맞게 테이블을 수정한 뒤 ORM 모델을 업데이트하면 됩니다. 현재 스키마는 측정 결과를 Raw(`raw_measurement_records`)와 통계(`stat_measurements`, `stat_measurement_values`) 두 축으로 관리하며, 과거 `equipments`/대시보드 인덱스는 제거된 상태입니다.
+필요 시 `sql/create_db.sql`을 직접 실행하거나, 도메인 요구에 맞게 테이블을 수정한 뒤 ORM 모델을 업데이트하면 됩니다. 현재 스키마는 측정 결과를 Raw(`raw_measurement_records`)와 통계(`stat_measurements`, `stat_measurement_values`) 두 축으로 관리하고, 파일 메타(`measurement_nodes/modules/versions/directories`)를 정규화하여 노드·모듈·버전·디렉터리 정보를 재사용합니다.
 
 ## 테스트
 

@@ -33,6 +33,57 @@ class FileStatus(str, enum.Enum):
     FAIL = "FAIL"
 
 
+class MeasurementNode(Base):
+    __tablename__ = "measurement_nodes"
+
+    id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+
+    files: Mapped[list[MeasurementFile]] = relationship("MeasurementFile", back_populates="node")
+
+
+class MeasurementModule(Base):
+    __tablename__ = "measurement_modules"
+
+    id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+
+    files: Mapped[list[MeasurementFile]] = relationship("MeasurementFile", back_populates="module")
+
+
+class MeasurementVersion(Base):
+    __tablename__ = "measurement_versions"
+
+    id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+
+    files: Mapped[list[MeasurementFile]] = relationship("MeasurementFile", back_populates="version")
+
+
+class MeasurementDirectory(Base):
+    __tablename__ = "measurement_directories"
+    __table_args__ = (
+        UniqueConstraint("parent_id", "name", name="uk_directories_parent_name"),
+    )
+
+    id: Mapped[int] = mapped_column(BIGINT(unsigned=True), primary_key=True)
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("measurement_directories.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    parent: Mapped[MeasurementDirectory | None] = relationship(
+        "MeasurementDirectory", remote_side="MeasurementDirectory.id", back_populates="children"
+    )
+    children: Mapped[list[MeasurementDirectory]] = relationship(
+        "MeasurementDirectory", back_populates="parent"
+    )
+    files: Mapped[list[MeasurementFile]] = relationship(
+        "MeasurementFile", back_populates="directory"
+    )
+
+
 class MeasurementFile(Base):
     __tablename__ = "measurement_files"
     __table_args__ = (
@@ -46,10 +97,23 @@ class MeasurementFile(Base):
         Computed("DATE(post_time)", persisted=True),
     )
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
-    parent_dir_0: Mapped[str] = mapped_column(String(255), nullable=False)
-    parent_dir_1: Mapped[str | None] = mapped_column(String(255))
-    parent_dir_2: Mapped[str | None] = mapped_column(String(255))
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    node_id: Mapped[int | None] = mapped_column(
+        ForeignKey("measurement_nodes.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+    )
+    module_id: Mapped[int | None] = mapped_column(
+        ForeignKey("measurement_modules.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+    )
+    version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("measurement_versions.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+    )
+    directory_id: Mapped[int | None] = mapped_column(
+        ForeignKey("measurement_directories.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+    )
     file_hash: Mapped[str | None] = mapped_column(String(64))
     processing_ms: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[FileStatus] = mapped_column(Enum(FileStatus), default=FileStatus.OK)
@@ -60,6 +124,12 @@ class MeasurementFile(Base):
         server_default=text("CURRENT_TIMESTAMP"),
     )
 
+    node: Mapped[MeasurementNode | None] = relationship("MeasurementNode", back_populates="files")
+    module: Mapped[MeasurementModule | None] = relationship("MeasurementModule", back_populates="files")
+    version: Mapped[MeasurementVersion | None] = relationship("MeasurementVersion", back_populates="files")
+    directory: Mapped[MeasurementDirectory | None] = relationship(
+        "MeasurementDirectory", back_populates="files"
+    )
     raw_records: Mapped[list[RawMeasurementRecord]] = relationship(
         "RawMeasurementRecord", back_populates="file", cascade="all, delete-orphan"
     )
@@ -69,6 +139,29 @@ class MeasurementFile(Base):
     class_counts: Mapped[list[FileClassCount]] = relationship(
         "FileClassCount", back_populates="file", cascade="all, delete-orphan"
     )
+
+    def _directory_segments(self) -> list[str]:
+        segments: list[str] = []
+        current = self.directory
+        while current is not None:
+            segments.append(current.name)
+            current = current.parent
+        return list(reversed(segments))
+
+    @property
+    def parent_dir_0(self) -> str | None:
+        segments = self._directory_segments()
+        return segments[0] if len(segments) > 0 else None
+
+    @property
+    def parent_dir_1(self) -> str | None:
+        segments = self._directory_segments()
+        return segments[1] if len(segments) > 1 else None
+
+    @property
+    def parent_dir_2(self) -> str | None:
+        segments = self._directory_segments()
+        return segments[2] if len(segments) > 2 else None
 
 
 class MeasurementMetricType(Base):
@@ -227,6 +320,10 @@ class FileClassCount(Base):
 __all__ = [
     "Base",
     "FileStatus",
+    "MeasurementNode",
+    "MeasurementModule",
+    "MeasurementVersion",
+    "MeasurementDirectory",
     "MeasurementFile",
     "MeasurementMetricType",
     "MeasurementItem",

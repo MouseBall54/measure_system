@@ -23,14 +23,49 @@ DROP TABLE IF EXISTS measurement_items;
 DROP TABLE IF EXISTS stat_value_types;
 DROP TABLE IF EXISTS measurement_metric_types;
 DROP TABLE IF EXISTS measurement_files;
+DROP TABLE IF EXISTS measurement_directories;
+DROP TABLE IF EXISTS measurement_versions;
+DROP TABLE IF EXISTS measurement_modules;
+DROP TABLE IF EXISTS measurement_nodes;
 DROP TABLE IF EXISTS classes;
 
 -- =========================================
 -- =========================================
--- 2) 측정 파일(인퍼런스 단위)
---   - parent_dir_0: 바로 상위 폴더
---   - parent_dir_1: 그 상위 폴더
---   - parent_dir_2: 최상위 그룹 폴더
+-- =========================================
+-- 2) 파일 메타데이터 보조 테이블
+-- =========================================
+CREATE TABLE measurement_nodes (
+  id   BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  UNIQUE KEY uk_nodes_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE measurement_modules (
+  id   BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  UNIQUE KEY uk_modules_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE measurement_versions (
+  id   BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  UNIQUE KEY uk_versions_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE measurement_directories (
+  id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+  parent_id BIGINT NULL,
+  name      VARCHAR(255) NOT NULL,
+
+  CONSTRAINT fk_directories_parent
+    FOREIGN KEY (parent_id) REFERENCES measurement_directories(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+  UNIQUE KEY uk_directories_parent_name (parent_id, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================================
+-- 3) 측정 파일(인퍼런스 단위)
 -- =========================================
 CREATE TABLE measurement_files (
   id             BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -38,16 +73,30 @@ CREATE TABLE measurement_files (
   post_date      DATE AS (DATE(post_time)) STORED,     -- 생성열
 
   file_path      TEXT NOT NULL,                        -- 절대 경로
-  parent_dir_0   VARCHAR(255) NOT NULL,                -- 예: "img"
-  parent_dir_1   VARCHAR(255) NULL,                    -- 예: "wafer123"
-  parent_dir_2   VARCHAR(255) NULL,                    -- 예: "2025-11-12" or "LINE_A"
-
   file_name      VARCHAR(255) NOT NULL,                -- basename
+
+  node_id        BIGINT NULL,
+  module_id      BIGINT NULL,
+  version_id     BIGINT NULL,
+  directory_id   BIGINT NULL,
 
   file_hash      CHAR(64) NULL,                        -- 내용 기반 SHA-256
   processing_ms  INT NULL,
   status         ENUM('OK','FAIL') NOT NULL DEFAULT 'OK',
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_files_node
+    FOREIGN KEY (node_id) REFERENCES measurement_nodes(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_files_module
+    FOREIGN KEY (module_id) REFERENCES measurement_modules(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_files_version
+    FOREIGN KEY (version_id) REFERENCES measurement_versions(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_files_directory
+    FOREIGN KEY (directory_id) REFERENCES measurement_directories(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
 
   UNIQUE KEY uk_measurement_files_hash (file_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

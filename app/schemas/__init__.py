@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class MeasurementFileBase(BaseModel):
     post_time: datetime
     file_path: str
-    parent_dir_0: str
+    parent_dir_0: str | None = None
     parent_dir_1: str | None = None
     parent_dir_2: str | None = None
     file_name: str
@@ -19,7 +19,9 @@ class MeasurementFileBase(BaseModel):
 
 
 class MeasurementFileCreate(MeasurementFileBase):
-    pass
+    node_name: str | None = None
+    module_name: str | None = None
+    version_name: str | None = None
 
 
 class MeasurementFileRead(MeasurementFileBase):
@@ -43,7 +45,6 @@ class StatMeasurementValuePayload(BaseModel):
 class StatMeasurementCreate(BaseModel):
     file_id: int
     item_id: int
-    extra_json: dict[str, Any] | None = None
     values: list[StatMeasurementValuePayload] = Field(default_factory=list)
 
 
@@ -56,7 +57,6 @@ class StatMeasurementRead(BaseModel):
     id: int
     file_id: int
     item_id: int
-    extra_json: dict[str, Any] | None
     values: list[StatMeasurementValueRead]
 
     class Config:
@@ -147,6 +147,9 @@ class MeasurementPipelineCreate(BaseModel):
                 "file": {
                     "post_time": "2024-05-20T08:00:00Z",
                     "file_path": "/data/line_a/20240520/img/wafer123/run1.csv",
+                    "node_name": "NODE_A",
+                    "module_name": "MODULE_X",
+                    "version_name": "2024.05",
                     "parent_dir_0": "img",
                     "parent_dir_1": "wafer123",
                     "parent_dir_2": "line_a",
