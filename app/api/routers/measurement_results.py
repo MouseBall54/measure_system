@@ -257,14 +257,13 @@ async def ingest_measurement_results(
             version_cache: dict[str, MeasurementVersion] = {}
             directory_cache: dict[tuple[str, ...], MeasurementDirectory] = {}
 
-        existing_stmt = (
-            select(MeasurementFile)
-            .where(MeasurementFile.file_hash == file_hash)
-            .with_for_update(nowait=False)
-        )
-        result = await session.execute(existing_stmt)
-        file_data = result.scalars().first()
-
+            existing_stmt = (
+                select(MeasurementFile)
+                .where(MeasurementFile.file_hash == file_hash)
+                .with_for_update(nowait=False)
+            )
+            result = await session.execute(existing_stmt)
+            file_data = result.scalars().first()
             node = await _get_or_create_node(session, payload.file.node_name, node_cache)
             module = await _get_or_create_module(session, payload.file.module_name, module_cache)
             version = await _get_or_create_version(
@@ -302,82 +301,82 @@ async def ingest_measurement_results(
             file_data.version_id = version.id if version else None
             file_data.directory_id = directory.id if directory else None
 
-        metric_cache: dict[tuple[str, str | None], MeasurementMetricType] = {}
-        item_cache: dict[tuple[str, str, int], MeasurementItem] = {}
-        value_type_cache: dict[str, StatValueType] = {}
+            metric_cache: dict[tuple[str, str | None], MeasurementMetricType] = {}
+            item_cache: dict[tuple[str, str, int], MeasurementItem] = {}
+            value_type_cache: dict[str, StatValueType] = {}
 
-        for raw_entry in payload.raw_measurements:
-            metric_type = await _get_or_create_metric_type(
-                session, raw_entry.item.metric_type, metric_cache
-            )
-            item = await _get_or_create_item(session, raw_entry.item, metric_type, item_cache)
-            record = RawMeasurementRecord(
-                file_id=file_data.id,
-                item_id=item.id,
-                measurable=raw_entry.measurable,
-                x_index=raw_entry.x_index,
-                y_index=raw_entry.y_index,
-                x_0=raw_entry.x_0,
-                y_0=raw_entry.y_0,
-                x_1=raw_entry.x_1,
-                y_1=raw_entry.y_1,
-                value=raw_entry.value,
-            )
-            session.add(record)
-            raw_count += 1
-
-        for stat_entry in payload.stat_measurements:
-            metric_type = await _get_or_create_metric_type(
-                session, stat_entry.item.metric_type, metric_cache
-            )
-            item = await _get_or_create_item(session, stat_entry.item, metric_type, item_cache)
-            measurement = StatMeasurement(
-                file_id=file_data.id,
-                item_id=item.id,
-            )
-            session.add(measurement)
-            await session.flush()
-
-            values = []
-            for value_payload in stat_entry.values:
-                value_type = await _get_or_create_value_type(
-                    session, value_payload.value_type_name, value_type_cache
+            for raw_entry in payload.raw_measurements:
+                metric_type = await _get_or_create_metric_type(
+                    session, raw_entry.item.metric_type, metric_cache
                 )
-                values.append(
-                    StatMeasurementValue(
-                        stat_measurement_id=measurement.id,
-                        value_type_id=value_type.id,
-                        value=value_payload.value,
-                    )
+                item = await _get_or_create_item(session, raw_entry.item, metric_type, item_cache)
+                record = RawMeasurementRecord(
+                    file_id=file_data.id,
+                    item_id=item.id,
+                    measurable=raw_entry.measurable,
+                    x_index=raw_entry.x_index,
+                    y_index=raw_entry.y_index,
+                    x_0=raw_entry.x_0,
+                    y_0=raw_entry.y_0,
+                    x_1=raw_entry.x_1,
+                    y_1=raw_entry.y_1,
+                    value=raw_entry.value,
                 )
-            session.add_all(values)
-            stat_count += 1
+                session.add(record)
+                raw_count += 1
 
-        for class_name, count in payload.class_counts.items():
-            class_stmt = select(DetectionClass).where(DetectionClass.name == class_name)
-            class_result = await session.execute(class_stmt)
-            det_class = class_result.scalar_one_or_none()
-            if det_class is None:
-                det_class = DetectionClass(name=class_name)
-                session.add(det_class)
+            for stat_entry in payload.stat_measurements:
+                metric_type = await _get_or_create_metric_type(
+                    session, stat_entry.item.metric_type, metric_cache
+                )
+                item = await _get_or_create_item(session, stat_entry.item, metric_type, item_cache)
+                measurement = StatMeasurement(
+                    file_id=file_data.id,
+                    item_id=item.id,
+                )
+                session.add(measurement)
                 await session.flush()
 
-            stmt = select(FileClassCount).where(
-                FileClassCount.file_id == file_data.id,
-                FileClassCount.class_id == det_class.id,
-            )
-            result = await session.execute(stmt)
-            existing = result.scalar_one_or_none()
-            if existing:
-                existing.cnt = count
-            else:
-                session.add(
-                    FileClassCount(
-                        file_id=file_data.id,
-                        class_id=det_class.id,
-                        cnt=count,
+                values = []
+                for value_payload in stat_entry.values:
+                    value_type = await _get_or_create_value_type(
+                        session, value_payload.value_type_name, value_type_cache
                     )
+                    values.append(
+                        StatMeasurementValue(
+                            stat_measurement_id=measurement.id,
+                            value_type_id=value_type.id,
+                            value=value_payload.value,
+                        )
+                    )
+                session.add_all(values)
+                stat_count += 1
+
+            for class_name, count in payload.class_counts.items():
+                class_stmt = select(DetectionClass).where(DetectionClass.name == class_name)
+                class_result = await session.execute(class_stmt)
+                det_class = class_result.scalar_one_or_none()
+                if det_class is None:
+                    det_class = DetectionClass(name=class_name)
+                    session.add(det_class)
+                    await session.flush()
+
+                stmt = select(FileClassCount).where(
+                    FileClassCount.file_id == file_data.id,
+                    FileClassCount.class_id == det_class.id,
                 )
+                result = await session.execute(stmt)
+                existing = result.scalar_one_or_none()
+                if existing:
+                    existing.cnt = count
+                else:
+                    session.add(
+                        FileClassCount(
+                            file_id=file_data.id,
+                            class_id=det_class.id,
+                            cnt=count,
+                        )
+                    )
 
     finally:
         await _release_file_lock(session, lock_key)
