@@ -128,12 +128,13 @@ erDiagram
 - 한 번의 측정/인퍼런스 파일 메타데이터 (`post_time`, `file_path`, 디렉터리/파일명 정보, 해시, 처리시간, 상태 등).
 - Raw/통계/클래스 정보는 모두 이 테이블의 `id`(= `file_id`)를 FK로 참조합니다.
 - 노드/모듈/버전/디렉터리 보조 테이블을 통해 관련 메타 정보를 재사용합니다.
+- `file_hash`는 `parent_dir_0/1/2 + file_name` 조합을 서버가 자동으로 해싱한 값이며, 동일한 해시가 이미 존재하면 기존 레코드가 갱신됩니다.
 
 ### measurement_nodes / measurement_modules / measurement_versions
 - 장비 노드, 모듈, 버전 정보를 각각 저장하는 테이블입니다. 텍스트 natural key(`name`)로 식별하며, 신규 값은 API 호출 시 자동 생성됩니다.
 
 ### measurement_directories
-- `parent_dir_0/1/2` 값을 정규화한 테이블입니다(레벨 + 이름). 파일은 dir0/1/2 FK로 각 디렉터리를 가리킵니다.
+- `parent_dir_0/1/2` 값을 트리 구조로 정규화한 테이블입니다. `parent_id`를 통해 무한히 깊은 디렉터리 경로를 표현할 수 있으며, 파일은 최종 디렉터리(`directory_id`)를 참조합니다.
 
 ### measurement_metric_types
 - `CD`, `LER` 등 측정 물리량과 단위를 정의합니다.

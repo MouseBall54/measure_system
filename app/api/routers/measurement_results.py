@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
+
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core import get_session
@@ -33,6 +35,17 @@ from ...schemas import (
 
 
 router = APIRouter(prefix="/measurement-results", tags=["measurement-results"])
+
+
+def _compute_file_hash(file_payload: MeasurementFileCreate) -> str:
+    parts = [
+        file_payload.parent_dir_0 or "",
+        file_payload.parent_dir_1 or "",
+        file_payload.parent_dir_2 or "",
+        file_payload.file_name,
+    ]
+    material = "|".join(parts)
+    return sha256(material.encode("utf-8")).hexdigest()
 
 
 async def _get_or_create_node(
@@ -125,6 +138,15 @@ async def _get_or_create_directory_path(
     return parent
 
 
+async def _clear_existing_measurement_data(
+    session: AsyncSession,
+    file_id: int,
+) -> None:
+    await session.execute(delete(RawMeasurementRecord).where(RawMeasurementRecord.file_id == file_id))
+    await session.execute(delete(StatMeasurement).where(StatMeasurement.file_id == file_id))
+    await session.execute(delete(FileClassCount).where(FileClassCount.file_id == file_id))
+
+
 async def _get_or_create_metric_type(
     session: AsyncSession,
     link: MetricTypeLink,
@@ -211,6 +233,11 @@ async def ingest_measurement_results(
         version_cache: dict[str, MeasurementVersion] = {}
         directory_cache: dict[tuple[str, ...], MeasurementDirectory] = {}
 
+        file_hash = _compute_file_hash(payload.file)
+        existing_stmt = select(MeasurementFile).where(MeasurementFile.file_hash == file_hash)
+        result = await session.execute(existing_stmt)
+        file_data = result.scalar_one_or_none()
+
         node = await _get_or_create_node(session, payload.file.node_name, node_cache)
         module = await _get_or_create_module(session, payload.file.module_name, module_cache)
         version = await _get_or_create_version(
@@ -222,21 +249,31 @@ async def ingest_measurement_results(
             directory_cache,
         )
 
-        file_data = MeasurementFile(
-            post_time=payload.file.post_time,
-            file_path=payload.file.file_path,
-            file_name=payload.file.file_name,
-            file_hash=payload.file.file_hash,
-            processing_ms=payload.file.processing_ms,
-            status=FileStatus(payload.file.status),
-            node_id=node.id if node else None,
-            module_id=module.id if module else None,
-            version_id=version.id if version else None,
-            directory_id=directory.id if directory else None,
-        )
-        session.add(file_data)
-        await session.flush()
-        await session.refresh(file_data)
+        if file_data is None:
+            file_data = MeasurementFile(
+                post_time=payload.file.post_time,
+                file_path=payload.file.file_path,
+                file_name=payload.file.file_name,
+                file_hash=file_hash,
+                processing_ms=payload.file.processing_ms,
+                status=FileStatus(payload.file.status),
+            )
+            session.add(file_data)
+            await session.flush()
+            await session.refresh(file_data)
+        else:
+            file_data.post_time = payload.file.post_time
+            file_data.file_path = payload.file.file_path
+            file_data.file_name = payload.file.file_name
+            file_data.processing_ms = payload.file.processing_ms
+            file_data.status = FileStatus(payload.file.status)
+            file_data.file_hash = file_hash
+            await _clear_existing_measurement_data(session, file_data.id)
+
+        file_data.node_id = node.id if node else None
+        file_data.module_id = module.id if module else None
+        file_data.version_id = version.id if version else None
+        file_data.directory_id = directory.id if directory else None
 
         metric_cache: dict[tuple[str, str | None], MeasurementMetricType] = {}
         item_cache: dict[tuple[str, str, int], MeasurementItem] = {}
