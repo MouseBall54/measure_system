@@ -159,10 +159,12 @@ async def _acquire_file_lock(session: AsyncSession, lock_key: str, timeout: int 
     acquired = result.scalar_one()
     if acquired != 1:
         raise HTTPException(status_code=503, detail="Could not obtain lock for file ingestion")
+    await session.commit()
 
 
 async def _release_file_lock(session: AsyncSession, lock_key: str) -> None:
     await session.execute(text("SELECT RELEASE_LOCK(:lock_key)"), {"lock_key": lock_key})
+    await session.commit()
 
 
 async def _get_or_create_metric_type(
