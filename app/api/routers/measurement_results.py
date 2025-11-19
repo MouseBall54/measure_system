@@ -258,12 +258,20 @@ async def ingest_measurement_results(
             directory_cache: dict[tuple[str, ...], MeasurementDirectory] = {}
 
             existing_stmt = (
-                select(MeasurementFile)
+                select(MeasurementFile.id)
                 .where(MeasurementFile.file_hash == file_hash)
-                .with_for_update(nowait=False)
+                .limit(1)
             )
             result = await session.execute(existing_stmt)
-            file_data = result.scalars().first()
+            file_id = result.scalar_one_or_none()
+            file_data = None
+            if file_id is not None:
+                result = await session.execute(
+                    select(MeasurementFile)
+                    .where(MeasurementFile.id == file_id)
+                    .with_for_update(nowait=False)
+                )
+                file_data = result.scalar_one_or_none()
             node = await _get_or_create_node(session, payload.file.node_name, node_cache)
             module = await _get_or_create_module(session, payload.file.module_name, module_cache)
             version = await _get_or_create_version(
