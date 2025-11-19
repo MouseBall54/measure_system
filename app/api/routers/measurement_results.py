@@ -65,7 +65,7 @@ async def _get_or_create_node(
         return cache[name]
     stmt = select(MeasurementNode).where(MeasurementNode.name == name)
     result = await session.execute(stmt)
-    node = result.scalar_one_or_none()
+    node = result.scalars().first()
     if node is None:
         node = MeasurementNode(name=name)
         session.add(node)
@@ -85,7 +85,7 @@ async def _get_or_create_module(
         return cache[name]
     stmt = select(MeasurementModule).where(MeasurementModule.name == name)
     result = await session.execute(stmt)
-    module = result.scalar_one_or_none()
+    module = result.scalars().first()
     if module is None:
         module = MeasurementModule(name=name)
         session.add(module)
@@ -105,7 +105,7 @@ async def _get_or_create_version(
         return cache[name]
     stmt = select(MeasurementVersion).where(MeasurementVersion.name == name)
     result = await session.execute(stmt)
-    version = result.scalar_one_or_none()
+    version = result.scalars().first()
     if version is None:
         version = MeasurementVersion(name=name)
         session.add(version)
@@ -134,7 +134,7 @@ async def _get_or_create_directory_path(
             MeasurementDirectory.name == name,
         )
         result = await session.execute(stmt)
-        directory = result.scalar_one_or_none()
+        directory = result.scalars().first()
         if directory is None:
             directory = MeasurementDirectory(parent_id=parent.id if parent else None, name=name)
             session.add(directory)
@@ -178,7 +178,7 @@ async def _get_or_create_metric_type(
 
     stmt = select(MeasurementMetricType).where(MeasurementMetricType.name == link.name)
     result = await session.execute(stmt)
-    metric_type = result.scalar_one_or_none()
+    metric_type = result.scalars().first()
     if metric_type is None:
         metric_type = MeasurementMetricType(name=link.name, unit=link.unit)
         session.add(metric_type)
@@ -203,7 +203,7 @@ async def _get_or_create_item(
         MeasurementItem.metric_type_id == metric_type.id,
     )
     result = await session.execute(stmt)
-    item = result.scalar_one_or_none()
+    item = result.scalars().first()
     if item is None:
         item = MeasurementItem(
             class_name=link.class_name,
@@ -226,7 +226,7 @@ async def _get_or_create_value_type(
 
     stmt = select(StatValueType).where(StatValueType.name == name)
     result = await session.execute(stmt)
-    value_type = result.scalar_one_or_none()
+    value_type = result.scalars().first()
     if value_type is None:
         value_type = StatValueType(name=name)
         session.add(value_type)
@@ -263,7 +263,7 @@ async def ingest_measurement_results(
                 .limit(1)
             )
             result = await session.execute(existing_stmt)
-            file_id = result.scalar_one_or_none()
+            file_id = result.scalars().first()
             file_data = None
             if file_id is not None:
                 result = await session.execute(
@@ -271,7 +271,7 @@ async def ingest_measurement_results(
                     .where(MeasurementFile.id == file_id)
                     .with_for_update(nowait=False)
                 )
-                file_data = result.scalar_one_or_none()
+                file_data = result.scalars().first()
             node = await _get_or_create_node(session, payload.file.node_name, node_cache)
             module = await _get_or_create_module(session, payload.file.module_name, module_cache)
             version = await _get_or_create_version(
@@ -363,7 +363,7 @@ async def ingest_measurement_results(
             for class_name, count in payload.class_counts.items():
                 class_stmt = select(DetectionClass).where(DetectionClass.name == class_name)
                 class_result = await session.execute(class_stmt)
-                det_class = class_result.scalar_one_or_none()
+                det_class = class_result.scalars().first()
                 if det_class is None:
                     det_class = DetectionClass(name=class_name)
                     session.add(det_class)
@@ -374,7 +374,7 @@ async def ingest_measurement_results(
                     FileClassCount.class_id == det_class.id,
                 )
                 result = await session.execute(stmt)
-                existing = result.scalar_one_or_none()
+                existing = result.scalars().first()
                 if existing:
                     existing.cnt = count
                 else:
