@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from hashlib import sha256
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy import delete, select
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core import get_session
@@ -145,6 +145,18 @@ async def _clear_existing_measurement_data(
     await session.execute(delete(RawMeasurementRecord).where(RawMeasurementRecord.file_id == file_id))
     await session.execute(delete(StatMeasurement).where(StatMeasurement.file_id == file_id))
     await session.execute(delete(FileClassCount).where(FileClassCount.file_id == file_id))
+    await session.flush()
+
+
+async def _acquire_file_lock(session: AsyncSession, lock_key: str, timeout: int = 30) -> None:
+    result = await session.execute(text("SELECT GET_LOCK(:lock_key, :timeout)"), {"lock_key": lock_key, "timeout": timeout})
+    acquired = result.scalar_one()
+    if acquired != 1:
+        raise HTTPException(status_code=503, detail="Could not obtain lock for file ingestion")
+
+
+async def _release_file_lock(session: AsyncSession, lock_key: str) -> None:
+    await session.execute(text("SELECT RELEASE_LOCK(:lock_key)"), {"lock_key": lock_key})
 
 
 async def _get_or_create_metric_type(
@@ -227,53 +239,60 @@ async def ingest_measurement_results(
     raw_count = 0
     stat_count = 0
 
-    async with session.begin():
-        node_cache: dict[str, MeasurementNode] = {}
-        module_cache: dict[str, MeasurementModule] = {}
-        version_cache: dict[str, MeasurementVersion] = {}
-        directory_cache: dict[tuple[str, ...], MeasurementDirectory] = {}
+    file_hash = _compute_file_hash(payload.file)
+    lock_key = f"file_ingest:{file_hash}"
+    await _acquire_file_lock(session, lock_key)
+    try:
+        async with session.begin():
+            node_cache: dict[str, MeasurementNode] = {}
+            module_cache: dict[str, MeasurementModule] = {}
+            version_cache: dict[str, MeasurementVersion] = {}
+            directory_cache: dict[tuple[str, ...], MeasurementDirectory] = {}
 
-        file_hash = _compute_file_hash(payload.file)
-        existing_stmt = select(MeasurementFile).where(MeasurementFile.file_hash == file_hash)
-        result = await session.execute(existing_stmt)
-        file_data = result.scalar_one_or_none()
-
-        node = await _get_or_create_node(session, payload.file.node_name, node_cache)
-        module = await _get_or_create_module(session, payload.file.module_name, module_cache)
-        version = await _get_or_create_version(
-            session, payload.file.version_name, version_cache
-        )
-        directory = await _get_or_create_directory_path(
-            session,
-            [payload.file.parent_dir_0, payload.file.parent_dir_1, payload.file.parent_dir_2],
-            directory_cache,
-        )
-
-        if file_data is None:
-            file_data = MeasurementFile(
-                post_time=payload.file.post_time,
-                file_path=payload.file.file_path,
-                file_name=payload.file.file_name,
-                file_hash=file_hash,
-                processing_ms=payload.file.processing_ms,
-                status=FileStatus(payload.file.status),
+            existing_stmt = (
+                select(MeasurementFile)
+                .where(MeasurementFile.file_hash == file_hash)
+                .with_for_update(nowait=False)
             )
-            session.add(file_data)
-            await session.flush()
-            await session.refresh(file_data)
-        else:
-            file_data.post_time = payload.file.post_time
-            file_data.file_path = payload.file.file_path
-            file_data.file_name = payload.file.file_name
-            file_data.processing_ms = payload.file.processing_ms
-            file_data.status = FileStatus(payload.file.status)
-            file_data.file_hash = file_hash
-            await _clear_existing_measurement_data(session, file_data.id)
+            result = await session.execute(existing_stmt)
+            file_data = result.scalar_one_or_none()
 
-        file_data.node_id = node.id if node else None
-        file_data.module_id = module.id if module else None
-        file_data.version_id = version.id if version else None
-        file_data.directory_id = directory.id if directory else None
+            node = await _get_or_create_node(session, payload.file.node_name, node_cache)
+            module = await _get_or_create_module(session, payload.file.module_name, module_cache)
+            version = await _get_or_create_version(
+                session, payload.file.version_name, version_cache
+            )
+            directory = await _get_or_create_directory_path(
+                session,
+                [payload.file.parent_dir_0, payload.file.parent_dir_1, payload.file.parent_dir_2],
+                directory_cache,
+            )
+
+            if file_data is None:
+                file_data = MeasurementFile(
+                    post_time=payload.file.post_time,
+                    file_path=payload.file.file_path,
+                    file_name=payload.file.file_name,
+                    file_hash=file_hash,
+                    processing_ms=payload.file.processing_ms,
+                    status=FileStatus(payload.file.status),
+                )
+                session.add(file_data)
+                await session.flush()
+                await session.refresh(file_data)
+            else:
+                file_data.post_time = payload.file.post_time
+                file_data.file_path = payload.file.file_path
+                file_data.file_name = payload.file.file_name
+                file_data.processing_ms = payload.file.processing_ms
+                file_data.status = FileStatus(payload.file.status)
+                await _clear_existing_measurement_data(session, file_data.id)
+
+            file_data.file_hash = file_hash
+            file_data.node_id = node.id if node else None
+            file_data.module_id = module.id if module else None
+            file_data.version_id = version.id if version else None
+            file_data.directory_id = directory.id if directory else None
 
         metric_cache: dict[tuple[str, str | None], MeasurementMetricType] = {}
         item_cache: dict[tuple[str, str, int], MeasurementItem] = {}
@@ -351,6 +370,9 @@ async def ingest_measurement_results(
                         cnt=count,
                     )
                 )
+
+    finally:
+        await _release_file_lock(session, lock_key)
 
     return MeasurementPipelineResult(
         file=MeasurementFileRead.model_validate(file_data),
