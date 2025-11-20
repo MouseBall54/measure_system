@@ -75,13 +75,52 @@ def _extract_file_path_from_body(body: Any) -> str | None:
     return file_path if isinstance(file_path, str) else None
 
 
+def _format_validation_errors(errors: list[Any]) -> str:
+    formatted: list[str] = []
+    for err in errors:
+        if not isinstance(err, dict):
+            formatted.append(str(err))
+            continue
+        loc = "->".join(str(part) for part in err.get("loc", []))
+        msg = err.get("msg", "validation error")
+        err_type = err.get("type", "unknown")
+        formatted.append(f"{loc} [{err_type}]: {msg}")
+    return "; ".join(formatted)
+
+
+def _body_preview(body: Any, limit: int = 512) -> str:
+    if body is None:
+        return ""
+    text: str
+    if isinstance(body, bytes):
+        text = body.decode("utf-8", errors="replace")
+    elif isinstance(body, str):
+        text = body
+    else:
+        try:
+            text = json.dumps(body, ensure_ascii=False)
+        except TypeError:
+            text = str(body)
+    if len(text) > limit:
+        return text[:limit] + "...(truncated)"
+    return text
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     file_path = _extract_file_path_from_body(exc.body)
-    if file_path:
-        logger.error("422 validation error for file_path=%s: %s", file_path, exc.errors())
-    else:
-        logger.error("422 validation error (file_path unavailable): %s", exc.errors())
+    error_summary = _format_validation_errors(exc.errors())
+    body_preview = _body_preview(exc.body)
+    client_host = request.client.host if request.client else None
+    logger.error(
+        "422 validation error method=%s path=%s client=%s file_path=%s errors=%s body=%s",
+        request.method,
+        request.url.path,
+        client_host,
+        file_path or "-",
+        error_summary,
+        body_preview,
+    )
     return await request_validation_exception_handler(request, exc)
 
 
