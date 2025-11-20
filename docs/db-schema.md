@@ -128,13 +128,13 @@ erDiagram
 - 한 번의 측정/인퍼런스 파일 메타데이터 (`post_time`, `file_path`, 디렉터리/파일명 정보, 해시, 처리시간, 상태 등).
 - Raw/통계/클래스 정보는 모두 이 테이블의 `id`(= `file_id`)를 FK로 참조합니다.
 - 노드/모듈/버전/디렉터리 보조 테이블을 통해 관련 메타 정보를 재사용합니다.
-- `file_hash`는 `parent_dir_0/1/2 + file_name` 조합을 서버가 자동으로 해싱한 값이며, 동일한 해시가 이미 존재하면 기존 레코드가 갱신됩니다.
+- `file_hash`는 `parent_dir_0(파일 바로 상위)` → `parent_dir_1` → `parent_dir_2(최상위)` → `file_name` 순서로 조합한 문자열을 서버가 자동으로 해싱한 값이며, 동일한 해시가 이미 존재하면 기존 레코드가 갱신됩니다.
 
 ### measurement_nodes / measurement_modules / measurement_versions
 - 장비 노드, 모듈, 버전 정보를 각각 저장하는 테이블입니다. 텍스트 natural key(`name`)로 식별하며, 신규 값은 API 호출 시 자동 생성됩니다.
 
 ### measurement_directories
-- `parent_dir_0/1/2` 값을 트리 구조로 정규화한 테이블입니다. `parent_id`를 통해 무한히 깊은 디렉터리 경로를 표현할 수 있으며, 파일은 최종 디렉터리(`directory_id`)를 참조합니다.
+- `parent_dir_0/1/2` 값을 트리 구조로 정규화한 테이블입니다. `parent_dir_0`이 파일과 가장 가까운 디렉터리이며 번호가 커질수록 상위 조상을 의미합니다. `parent_id`를 통해 무한히 깊은 디렉터리 경로를 표현할 수 있으며, 파일은 최종 디렉터리(`directory_id`)를 참조합니다.
 
 ### measurement_metric_types
 - `CD`, `LER` 등 측정 물리량과 단위를 정의합니다.
@@ -175,8 +175,8 @@ erDiagram
     "node_name": "NODE_A",
     "module_name": "PROC_UNIT_1",
     "version_name": "2024.05",
-    "parent_dir_0": "img",
-    "parent_dir_1": "wafer123",
+    "parent_dir_0": "wafer123",
+    "parent_dir_1": "img",
     "parent_dir_2": "line_a",
     "file_name": "run1.csv",
     "status": "OK"

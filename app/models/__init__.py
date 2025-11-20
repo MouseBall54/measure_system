@@ -146,7 +146,7 @@ class MeasurementFile(Base):
         while current is not None:
             segments.append(current.name)
             current = current.parent
-        return list(reversed(segments))
+        return segments
 
     @property
     def parent_dir_0(self) -> str | None:

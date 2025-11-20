@@ -3,7 +3,7 @@
 ## Project Concept
 - FastAPI 기반 측정 데이터 관리 서버; `/measurement-results` 단일 POST로 파일/Raw/통계를 한 번에 저장
 - MySQL 스키마를 정규화하여 노드/모듈/버전/디렉터리 메타 정보를 별도 테이블로 관리하고, Raw/Stat/Value 타입 테이블에 측정 데이터를 적재
-- `file_hash = SHA256(parent_dir_0/1/2 + file_name)` 으로 중복 파일을 감지하여 기존 데이터를 삭제 후 갱신
+- `file_hash = SHA256(parent_dir_0(파일 바로 상위)/1/2 + file_name)` 으로 중복 파일을 감지하여 기존 데이터를 삭제 후 갱신
 
 ## Core Components
 - `app/api/routers/measurement_results.py`: 통합 인제스트 엔드포인트

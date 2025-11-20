@@ -52,6 +52,7 @@ CREATE TABLE measurement_versions (
   UNIQUE KEY uk_versions_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- parent_dir_0 = 파일 바로 상위, parent_dir_1 = 그 상위, parent_dir_2 = 최상위 ...
 CREATE TABLE measurement_directories (
   id        BIGINT AUTO_INCREMENT PRIMARY KEY,
   parent_id BIGINT NULL,
@@ -80,7 +81,7 @@ CREATE TABLE measurement_files (
   version_id     BIGINT NULL,
   directory_id   BIGINT NULL,
 
-  file_hash      CHAR(64) NULL,                        -- 내용 기반 SHA-256
+  file_hash      CHAR(64) NULL,                        -- parent_dir_0(가장 가까움)/1/2 + file_name SHA-256
   processing_ms  INT NULL,
   status         ENUM('OK','FAIL') NOT NULL DEFAULT 'OK',
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

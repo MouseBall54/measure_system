@@ -119,11 +119,12 @@ async def _get_or_create_directory_path(
     segments: list[str | None],
     cache: dict[tuple[str, ...], MeasurementDirectory],
 ) -> MeasurementDirectory | None:
+    ordered_segments = [name for name in segments if name]
+    if not ordered_segments:
+        return None
     path: list[str] = []
     parent: MeasurementDirectory | None = None
-    for name in segments:
-        if not name:
-            continue
+    for name in reversed(ordered_segments):
         path.append(name)
         key = tuple(path)
         if key in cache:
