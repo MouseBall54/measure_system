@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     mysql_db: str = "measure_system"
 
     echo_sql: bool = False
+    log_dir: str = "logs"
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 
@@ -40,4 +41,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-
